@@ -1,13 +1,10 @@
-version: '3.8'
-
 services:
-  homework_bot:
+  homework_bot:   # Имя может быть другим, не меняй его
     build: .
     container_name: homework_bot
     restart: always
+    network_mode: host    # <--- ДОБАВЬ ВОТ ЭТУ МАГИЧЕСКУЮ СТРОЧКУ
     volumes:
-      # ВАЖНО: Мы привязываем файл базы данных
-      # Слева - файл на сервере, Справа - путь в контейнере
       - ./data.json:/app/data.json
     env_file:
       - .env
