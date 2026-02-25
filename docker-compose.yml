@@ -1,10 +1,9 @@
 services:
-  homework_bot:   # Имя может быть другим, не меняй его
+  homework_bot:
     build: .
     container_name: homework_bot
     restart: always
-    network_mode: host    # <--- ДОБАВЬ ВОТ ЭТУ МАГИЧЕСКУЮ СТРОЧКУ
     volumes:
-      - ./data.json:/app/data.json
+      - ./data.db:/app/data.db
     env_file:
       - .env
