@@ -172,7 +172,7 @@ async def show_faq(callback: CallbackQuery):
     """Показать FAQ."""
     if not await check_access(callback):
         return
-    
+
     faq_text = """❓ <b>Часто задаваемые вопросы</b>
 
 <b>Что это за бот?</b>
@@ -180,8 +180,12 @@ async def show_faq(callback: CallbackQuery):
 
 <b>Как пользоваться?</b>
 • Нажми кнопку с нужным периодом (сегодня, завтра, неделя)
-• Или просто напиши дату в чат, например: <code>15.12.2025</code>
-• Бот покажет все ДЗ на эту дату
+• Или напиши дату/период в чат:
+  - <code>25.12.2025</code> — ДЗ на конкретную дату
+  - <code>25.02-28.02</code> — ДЗ с 25 по 28 февраля
+  - <code>25-28</code> — ДЗ с 25 по 28 число текущего месяца
+  - <code>25,26,27,28</code> — ДЗ за перечисленные дни
+• Бот покажет все ДЗ за выбранный период
 
 <b>Что означают иконки?</b>
 • ✅ — ДЗ отмечено как выполненное (функция ещё в бете)
@@ -287,18 +291,26 @@ async def process_custom_date(message: Message, state: FSMContext):
 
 @router.message(F.text)
 async def handle_any_text(message: Message, state: FSMContext):
-    """Обработать любой текст — проверить, не дата ли это."""
+    """Обработать любой текст — проверить, не дата или диапазон ли это."""
     # Если пользователь в состоянии ввода ключа — не перехватываем
     current_state = await state.get_state()
     if current_state == KeyInputState.waiting_for_key:
         return
-    
+
     if not _storage.is_authorized(message.from_user.id):
         return
-    
+
     text = message.text.strip()
-    target_date = parse_date(text)
     
+    # Сначала пробуем распарсить как диапазон
+    date_range = parse_date_range(text)
+    if date_range is not None:
+        from_date, to_date = date_range
+        await send_homework(message, from_date, to_date, is_range=True)
+        return
+    
+    # Если не диапазон — пробуем как одиночную дату
+    target_date = parse_date(text)
     if target_date is not None:
         await send_homework(message, target_date, target_date)
 
@@ -346,19 +358,19 @@ def parse_date(text: str) -> date | None:
     """Распарсить дату из строки."""
     # Убираем лишние символы
     text = text.strip()
-    
+
     for fmt in ("%d.%m.%Y", "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
         try:
             return datetime.strptime(text, fmt).date()
         except ValueError:
             continue
-    
+
     # Пробуем найти дату в тексте
     patterns = [
         r"(\d{1,2})\.(\d{1,2})\.(\d{4})",  # ДД.ММ.ГГГГ
         r"(\d{4})-(\d{1,2})-(\d{1,2})",     # ГГГГ-ММ-ДД
     ]
-    
+
     for pattern in patterns:
         match = re.search(pattern, text)
         if match:
@@ -370,5 +382,104 @@ def parse_date(text: str) -> date | None:
                     return date(int(groups[2]), int(groups[1]), int(groups[0]))
             except ValueError:
                 continue
+
+    return None
+
+
+def parse_date_range(text: str) -> tuple[date, date] | None:
+    """
+    Распарсить диапазон дат из строки.
+    
+    Поддерживаемые форматы:
+    - 25.02-28.02 (ДД.ММ-ДД.ММ)
+    - 25.02.2025-28.02.2025 (ДД.ММ.ГГГГ-ДД.ММ.ГГГГ)
+    - 25-28 (ДД-ДД, используется текущий месяц)
+    - 25,26,27,28 (перечисление дней)
+    - 25.02,28.02 (перечисление ДД.ММ)
+    
+    Returns:
+        Кортеж (from_date, to_date) или None
+    """
+    text = text.strip()
+    today = get_today()
+    
+    # Формат: ДД.ММ-ДД.ММ или ДД.ММ.ГГГГ-ДД.ММ.ГГГГ
+    range_pattern = r"(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s*-\s*(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?"
+    match = re.match(range_pattern, text)
+    if match:
+        try:
+            d1, m1, y1, d2, m2, y2 = match.groups()
+            year = int(y1) if y1 else today.year
+            year2 = int(y2) if y2 else year
+            
+            from_date = date(year, int(m1), int(d1))
+            to_date = date(year2, int(m2), int(d2))
+            
+            if from_date <= to_date:
+                return from_date, to_date
+        except ValueError:
+            pass
+    
+    # Формат: ГГГГ-ММ-ДД-ГГГГ-ММ-ДД
+    iso_range_pattern = r"(\d{4})-(\d{1,2})-(\d{1,2})\s*-\s*(\d{4})-(\d{1,2})-(\d{1,2})"
+    match = re.match(iso_range_pattern, text)
+    if match:
+        try:
+            y1, m1, d1, y2, m2, d2 = match.groups()
+            from_date = date(int(y1), int(m1), int(d1))
+            to_date = date(int(y2), int(m2), int(d2))
+            
+            if from_date <= to_date:
+                return from_date, to_date
+        except ValueError:
+            pass
+    
+    # Формат: перечисление дней через запятую (25,26,27,28 или 25.02,28.02)
+    if "," in text and "-" not in text:
+        parts = [p.strip() for p in text.split(",")]
+        dates = []
+        
+        for part in parts:
+            # Пробуем распарсить как ДД.ММ или ДД.ММ.ГГГГ
+            date_match = re.match(r"(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?", part)
+            if date_match:
+                d, m, y = date_match.groups()
+                year = int(y) if y else today.year
+                try:
+                    dates.append(date(year, int(m), int(d)))
+                except ValueError:
+                    pass
+            else:
+                # Просто число - день текущего месяца
+                try:
+                    day = int(part)
+                    dates.append(date(today.year, today.month, day))
+                except ValueError:
+                    pass
+        
+        if len(dates) >= 2:
+            return min(dates), max(dates)
+        elif len(dates) == 1:
+            return dates[0], dates[0]
+    
+    # Формат: 25-28 (только дни, используем текущий месяц)
+    day_range_pattern = r"^(\d{1,2})\s*-\s*(\d{1,2})$"
+    match = re.match(day_range_pattern, text)
+    if match:
+        try:
+            d1, d2 = match.groups()
+            d1, d2 = int(d1), int(d2)
+            
+            # Используем текущий месяц
+            year = today.year
+            month = today.month
+            
+            from_date = date(year, month, d1)
+            to_date = date(year, month, d2)
+            
+            if from_date <= to_date:
+                return from_date, to_date
+        except ValueError:
+            pass
     
     return None
