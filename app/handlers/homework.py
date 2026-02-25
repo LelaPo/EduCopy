@@ -59,11 +59,10 @@ async def cmd_start(message: Message, state: FSMContext):
     """Обработчик команды /start."""
     await state.clear()
     user_id = message.from_user.id
-    
+
     # Проверяем авторизацию
     if _storage.is_authorized(user_id):
         if _storage.is_admin(user_id):
-            # Сообщение для создателя
             await message.answer(
                 "👋 <b>Привет, создатель!</b>\n\n"
                 "Я покажу домашние задания из дневника.\n\n"
@@ -72,17 +71,14 @@ async def cmd_start(message: Message, state: FSMContext):
                 parse_mode="HTML",
             )
         else:
-            # Сообщение для приглашённых пользователей
             await message.answer(
                 "👋 <b>Добро пожаловать в бета-тест!</b>\n\n"
-                "Вы были приглашены для тестирования бота, "
-                "который показывает домашние задания из электронного дневника.\n\n"
+                "Вы были приглашены для тестирования бота.\n\n"
                 "Выберите нужный период:",
                 reply_markup=get_main_keyboard(),
                 parse_mode="HTML",
             )
     else:
-        # Не авторизован — просим ключ
         await state.set_state(KeyInputState.waiting_for_key)
         await message.answer(
             "🔐 <b>Доступ ограничен</b>\n\n"
@@ -103,8 +99,7 @@ async def process_key_input(message: Message, state: FSMContext):
         username = f"@{username}"
     else:
         username = message.from_user.full_name
-    
-    # Пробуем активировать
+
     if _storage.activate_key(key, user_id, username):
         await state.clear()
         await message.answer(
@@ -130,7 +125,7 @@ async def process_key_input(message: Message, state: FSMContext):
 async def check_access(event: Message | CallbackQuery, state: FSMContext = None) -> bool:
     """Проверить доступ пользователя."""
     user_id = event.from_user.id if event.from_user else 0
-    
+
     if not _storage.is_authorized(user_id):
         text = (
             "🔐 <b>Доступ ограничен</b>\n\n"
@@ -153,9 +148,9 @@ async def back_to_menu(callback: CallbackQuery, state: FSMContext):
     """Вернуться в главное меню."""
     if not await check_access(callback):
         return
-    
+
     await state.clear()
-    
+
     await callback.message.edit_text(
         "📚 <b>Главное меню</b>\n\n"
         "Выбери период:",
@@ -176,7 +171,7 @@ async def show_faq(callback: CallbackQuery):
     faq_text = """❓ <b>Часто задаваемые вопросы</b>
 
 <b>Что это за бот?</b>
-Бот показывает домашние задания из электронного дневника (authedu.mosreg.ru). Не нужно каждый раз заходить на сайт — просто нажми кнопку!
+Бот показывает домашние задания из электронного дневника (authedu.mosreg.ru).
 
 <b>Как пользоваться?</b>
 • Нажми кнопку с нужным периодом (сегодня, завтра, неделя)
@@ -185,22 +180,13 @@ async def show_faq(callback: CallbackQuery):
   - <code>25.02-28.02</code> — ДЗ с 25 по 28 февраля
   - <code>25-28</code> — ДЗ с 25 по 28 число текущего месяца
   - <code>25,26,27,28</code> — ДЗ за перечисленные дни
-• Бот покажет все ДЗ за выбранный период
-
-<b>Что означают иконки?</b>
-• ✅ — ДЗ отмечено как выполненное (функция ещё в бете)
-• 📖 — ДЗ ещё не выполнено (функция ещё в бете)
-• 📎 — к заданию прикреплён файл (кликни чтобы открыть)
 
 <b>Почему бот закрытый?</b>
-Бот находится в стадии бета-теста. Доступ выдаётся по приглашениям, чтобы я мог контролировать нагрузку и собирать обратную связь.
-
-<b>Будет ли открытый код?</b>
-Да! Open-source версия в разработке. Следи за обновлениями.
+Бот находится в стадии бета-теста. Доступ выдаётся по приглашениям.
 
 <b>Нашёл баг / есть идея?</b>
-Напиши создателю бота — он будет рад обратной связи!"""
-    
+Напиши создателю бота."""
+
     await callback.message.edit_text(
         faq_text,
         reply_markup=get_faq_keyboard(),
@@ -216,7 +202,7 @@ async def hw_today(callback: CallbackQuery):
     """ДЗ на сегодня."""
     if not await check_access(callback):
         return
-    
+
     await callback.answer("Загружаю...")
     today = get_today()
     await send_homework(callback.message, today, today)
@@ -227,7 +213,7 @@ async def hw_tomorrow(callback: CallbackQuery):
     """ДЗ на завтра."""
     if not await check_access(callback):
         return
-    
+
     await callback.answer("Загружаю...")
     tomorrow = get_today() + timedelta(days=1)
     await send_homework(callback.message, tomorrow, tomorrow)
@@ -238,7 +224,7 @@ async def hw_week(callback: CallbackQuery):
     """ДЗ на неделю."""
     if not await check_access(callback):
         return
-    
+
     await callback.answer("Загружаю...")
     today = get_today()
     week_later = today + timedelta(days=7)
@@ -250,9 +236,9 @@ async def hw_custom_date(callback: CallbackQuery, state: FSMContext):
     """Запросить ввод даты."""
     if not await check_access(callback):
         return
-    
+
     await state.set_state(DateInputState.waiting_for_date)
-    
+
     await callback.message.edit_text(
         "📅 <b>Введи дату</b>\n\n"
         "Формат: <code>ДД.ММ.ГГГГ</code> или <code>ГГГГ-ММ-ДД</code>\n\n"
@@ -267,13 +253,13 @@ async def hw_custom_date(callback: CallbackQuery, state: FSMContext):
 
 @router.message(DateInputState.waiting_for_date)
 async def process_custom_date(message: Message, state: FSMContext):
-    """Обработать введённую дату (в режиме ожидания)."""
+    """Обработать введённую дату."""
     if not await check_access(message, state):
         return
-    
+
     text = message.text.strip()
     target_date = parse_date(text)
-    
+
     if target_date is None:
         await message.answer(
             "❌ Не удалось распознать дату.\n"
@@ -282,7 +268,7 @@ async def process_custom_date(message: Message, state: FSMContext):
             reply_markup=get_back_keyboard(),
         )
         return
-    
+
     await state.clear()
     await send_homework(message, target_date, target_date)
 
@@ -292,7 +278,6 @@ async def process_custom_date(message: Message, state: FSMContext):
 @router.message(F.text)
 async def handle_any_text(message: Message, state: FSMContext):
     """Обработать любой текст — проверить, не дата или диапазон ли это."""
-    # Если пользователь в состоянии ввода ключа — не перехватываем
     current_state = await state.get_state()
     if current_state == KeyInputState.waiting_for_key:
         return
@@ -302,14 +287,12 @@ async def handle_any_text(message: Message, state: FSMContext):
 
     text = message.text.strip()
     
-    # Сначала пробуем распарсить как диапазон
     date_range = parse_date_range(text)
     if date_range is not None:
         from_date, to_date = date_range
         await send_homework(message, from_date, to_date, is_range=True)
         return
     
-    # Если не диапазон — пробуем как одиночную дату
     target_date = parse_date(text)
     if target_date is not None:
         await send_homework(message, target_date, target_date)
@@ -318,8 +301,8 @@ async def handle_any_text(message: Message, state: FSMContext):
 # ============= Отправка ДЗ =============
 
 async def send_homework(
-    message: Message, 
-    from_date: date, 
+    message: Message,
+    from_date: date,
     to_date: date,
     is_range: bool = False,
 ):
@@ -327,36 +310,31 @@ async def send_homework(
     if _client is None:
         await message.answer("❌ Клиент API не инициализирован")
         return
-    
+
     try:
         items = await _client.fetch_homeworks(from_date, to_date)
-        
-        # Если запрос на конкретную дату - фильтруем
+
         if not is_range:
             items = [item for item in items if item.homework_date == from_date]
-        
+
         text = format_homework_list(items, from_date, is_range=is_range)
-        
+
         await message.answer(
             text,
             parse_mode="HTML",
             reply_markup=get_main_keyboard(),
             disable_web_page_preview=True,
         )
-        
+
     except AutheduAPIError as e:
         logger.error(f"Ошибка API: {e}")
-        await message.answer(
-            str(e),
-            reply_markup=get_main_keyboard(),
-        )
+        await message.answer(str(e), reply_markup=get_main_keyboard())
 
 
 # ============= Утилиты =============
 
 def parse_date(text: str) -> date | None:
     """Распарсить дату из строки."""
-    # Убираем лишние символы
     text = text.strip()
 
     for fmt in ("%d.%m.%Y", "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
@@ -365,10 +343,9 @@ def parse_date(text: str) -> date | None:
         except ValueError:
             continue
 
-    # Пробуем найти дату в тексте
     patterns = [
-        r"(\d{1,2})\.(\d{1,2})\.(\d{4})",  # ДД.ММ.ГГГГ
-        r"(\d{4})-(\d{1,2})-(\d{1,2})",     # ГГГГ-ММ-ДД
+        r"(\d{1,2})\.(\d{1,2})\.(\d{4})",
+        r"(\d{4})-(\d{1,2})-(\d{1,2})",
     ]
 
     for pattern in patterns:
@@ -376,9 +353,9 @@ def parse_date(text: str) -> date | None:
         if match:
             groups = match.groups()
             try:
-                if len(groups[0]) == 4:  # ГГГГ-ММ-ДД
+                if len(groups[0]) == 4:
                     return date(int(groups[0]), int(groups[1]), int(groups[2]))
-                else:  # ДД.ММ.ГГГГ
+                else:
                     return date(int(groups[2]), int(groups[1]), int(groups[0]))
             except ValueError:
                 continue
@@ -387,23 +364,11 @@ def parse_date(text: str) -> date | None:
 
 
 def parse_date_range(text: str) -> tuple[date, date] | None:
-    """
-    Распарсить диапазон дат из строки.
-    
-    Поддерживаемые форматы:
-    - 25.02-28.02 (ДД.ММ-ДД.ММ)
-    - 25.02.2025-28.02.2025 (ДД.ММ.ГГГГ-ДД.ММ.ГГГГ)
-    - 25-28 (ДД-ДД, используется текущий месяц)
-    - 25,26,27,28 (перечисление дней)
-    - 25.02,28.02 (перечисление ДД.ММ)
-    
-    Returns:
-        Кортеж (from_date, to_date) или None
-    """
+    """Распарсить диапазон дат из строки."""
     text = text.strip()
     today = get_today()
     
-    # Формат: ДД.ММ-ДД.ММ или ДД.ММ.ГГГГ-ДД.ММ.ГГГГ
+    # ДД.ММ-ДД.ММ
     range_pattern = r"(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?\s*-\s*(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?"
     match = re.match(range_pattern, text)
     if match:
@@ -411,36 +376,18 @@ def parse_date_range(text: str) -> tuple[date, date] | None:
             d1, m1, y1, d2, m2, y2 = match.groups()
             year = int(y1) if y1 else today.year
             year2 = int(y2) if y2 else year
-            
             from_date = date(year, int(m1), int(d1))
             to_date = date(year2, int(m2), int(d2))
-            
             if from_date <= to_date:
                 return from_date, to_date
         except ValueError:
             pass
     
-    # Формат: ГГГГ-ММ-ДД-ГГГГ-ММ-ДД
-    iso_range_pattern = r"(\d{4})-(\d{1,2})-(\d{1,2})\s*-\s*(\d{4})-(\d{1,2})-(\d{1,2})"
-    match = re.match(iso_range_pattern, text)
-    if match:
-        try:
-            y1, m1, d1, y2, m2, d2 = match.groups()
-            from_date = date(int(y1), int(m1), int(d1))
-            to_date = date(int(y2), int(m2), int(d2))
-            
-            if from_date <= to_date:
-                return from_date, to_date
-        except ValueError:
-            pass
-    
-    # Формат: перечисление дней через запятую (25,26,27,28 или 25.02,28.02)
+    # Перечисление через запятую
     if "," in text and "-" not in text:
         parts = [p.strip() for p in text.split(",")]
         dates = []
-        
         for part in parts:
-            # Пробуем распарсить как ДД.ММ или ДД.ММ.ГГГГ
             date_match = re.match(r"(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?", part)
             if date_match:
                 d, m, y = date_match.groups()
@@ -450,33 +397,24 @@ def parse_date_range(text: str) -> tuple[date, date] | None:
                 except ValueError:
                     pass
             else:
-                # Просто число - день текущего месяца
                 try:
                     day = int(part)
                     dates.append(date(today.year, today.month, day))
                 except ValueError:
                     pass
-        
         if len(dates) >= 2:
             return min(dates), max(dates)
         elif len(dates) == 1:
             return dates[0], dates[0]
     
-    # Формат: 25-28 (только дни, используем текущий месяц)
+    # ДД-ДД (текущий месяц)
     day_range_pattern = r"^(\d{1,2})\s*-\s*(\d{1,2})$"
     match = re.match(day_range_pattern, text)
     if match:
         try:
-            d1, d2 = match.groups()
-            d1, d2 = int(d1), int(d2)
-            
-            # Используем текущий месяц
-            year = today.year
-            month = today.month
-            
-            from_date = date(year, month, d1)
-            to_date = date(year, month, d2)
-            
+            d1, d2 = int(match.group(1)), int(match.group(2))
+            from_date = date(today.year, today.month, d1)
+            to_date = date(today.year, today.month, d2)
             if from_date <= to_date:
                 return from_date, to_date
         except ValueError:

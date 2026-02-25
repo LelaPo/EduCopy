@@ -8,10 +8,13 @@ import sys
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.fsm.storage.memory import MemoryStorage
 
 from app.config import load_config
 from app.services.authedu_client import AutheduClient
 from app.services.storage import Storage
+from app.database import init_db, close_db
+from app.database.engine import get_session_maker
 from app.handlers.homework import router as homework_router, setup_handlers
 from app.handlers.admin import router as admin_router, setup_admin_handlers
 
@@ -31,41 +34,46 @@ logger = logging.getLogger(__name__)
 async def main():
     """Главная функция запуска бота."""
     logger.info("Загрузка конфигурации...")
-    
+
     try:
         config = load_config()
     except ValueError as e:
         logger.error(f"Ошибка конфигурации: {e}")
         sys.exit(1)
-    
+
     # ID администратора (создателя)
     admin_id = 1034877346
-    
+
     logger.info(f"Admin ID: {admin_id}")
-    
-    # Создаём хранилище
+
+    # Инициализация БД
+    init_db()
+    logger.info("База данных инициализирована")
+
+    # Создаём хранилище и устанавливаем session_maker
     storage = Storage(admin_id=admin_id)
-    
+    storage.set_session_maker(get_session_maker())
+
     # Создаём клиент API
     client = AutheduClient(config.authedu)
-    
+
     # Инициализируем обработчики
     setup_handlers(config, client, storage)
     setup_admin_handlers(storage)
-    
+
     # Создаём бота и диспетчер
     bot = Bot(
         token=config.telegram.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    dp = Dispatcher()
-    
+    dp = Dispatcher(storage=MemoryStorage())
+
     # Важно: admin_router должен быть первым
     dp.include_router(admin_router)
     dp.include_router(homework_router)
-    
+
     logger.info("Бот запускается (long polling)...")
-    
+
     try:
         await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)
@@ -73,6 +81,7 @@ async def main():
         logger.info("Закрытие соединений...")
         await client.close()
         await bot.session.close()
+        close_db()
 
 
 if __name__ == "__main__":

@@ -107,17 +107,22 @@ EduCopy/
 ├── main.py                 # Точка входа
 ├── app/
 │   ├── config.py           # Конфигурация
+│   ├── database/
+│   │   ├── engine.py       # Движок БД (SQLite + SQLAlchemy)
+│   │   └── models.py       # Модели данных (User, AccessKey)
 │   ├── handlers/
 │   │   ├── homework.py     # Обработчики команд
 │   │   └── admin.py        # Админ-панель
 │   ├── keyboards/
 │   │   └── inline.py       # Inline-клавиатуры
+│   ├── middlewares/
+│   │   └── database.py     # Middleware для сессии БД
 │   ├── services/
 │   │   ├── authedu_client.py  # API клиент
-│   │   └── storage.py      # Хранение данных
+│   │   └── storage.py      # Хранение данных (SQLite)
 │   └── utils/
 │       └── formatting.py   # Форматирование вывода
-├── data.json               # База данных ключей и пользователей
+├── data.db                 # SQLite база данных
 ├── .env                    # Переменные окружения
 ├── docker-compose.yml      # Docker Compose
 └── requirements.txt        # Зависимости Python
