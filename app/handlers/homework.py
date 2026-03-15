@@ -203,7 +203,12 @@ async def hw_today(callback: CallbackQuery):
     if not await check_access(callback):
         return
 
-    await callback.answer("Загружаю...")
+    try:
+        await callback.answer("Загружаю...")
+    except Exception:
+        # Игнорируем ошибку если callback уже истёк
+        pass
+    
     today = get_today()
     await send_homework(callback.message, today, today)
 
@@ -214,7 +219,12 @@ async def hw_tomorrow(callback: CallbackQuery):
     if not await check_access(callback):
         return
 
-    await callback.answer("Загружаю...")
+    try:
+        await callback.answer("Загружаю...")
+    except Exception:
+        # Игнорируем ошибку если callback уже истёк
+        pass
+    
     tomorrow = get_today() + timedelta(days=1)
     await send_homework(callback.message, tomorrow, tomorrow)
 
@@ -225,7 +235,12 @@ async def hw_week(callback: CallbackQuery):
     if not await check_access(callback):
         return
 
-    await callback.answer("Загружаю...")
+    try:
+        await callback.answer("Загружаю...")
+    except Exception:
+        # Игнорируем ошибку если callback уже истёк
+        pass
+    
     today = get_today()
     week_later = today + timedelta(days=7)
     await send_homework(callback.message, today, week_later, is_range=True)
@@ -239,15 +254,19 @@ async def hw_custom_date(callback: CallbackQuery, state: FSMContext):
 
     await state.set_state(DateInputState.waiting_for_date)
 
-    await callback.message.edit_text(
-        "📅 <b>Введи дату</b>\n\n"
-        "Формат: <code>ДД.ММ.ГГГГ</code> или <code>ГГГГ-ММ-ДД</code>\n\n"
-        "Примеры:\n"
-        "• <code>25.12.2025</code>\n"
-        "• <code>2025-12-25</code>",
-        reply_markup=get_back_keyboard(),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            "📅 <b>Введи дату</b>\n\n"
+            "Формат: <code>ДД.ММ.ГГГГ</code> или <code>ГГГГ-ММ-ДД</code>\n\n"
+            "Примеры:\n"
+            "• <code>25.12.2025</code>\n"
+            "• <code>2025-12-25</code>",
+            reply_markup=get_back_keyboard(),
+            parse_mode="HTML",
+        )
+    except Exception:
+        # Игнорируем ошибку если сообщение уже отредактировано
+        pass
     await callback.answer()
 
 

@@ -90,13 +90,17 @@ async def admin_create_key(callback: CallbackQuery):
 
     key = _storage.generate_key()
 
-    await callback.message.edit_text(
-        "✅ <b>Ключ создан!</b>\n\n"
-        f"<code>{key}</code>\n\n"
-        "👆 Нажми чтобы скопировать.",
-        reply_markup=get_back_to_admin_keyboard(),
-        parse_mode="HTML",
-    )
+    try:
+        await callback.message.edit_text(
+            "✅ <b>Ключ создан!</b>\n\n"
+            f"<code>{key}</code>\n\n"
+            "👆 Нажми чтобы скопировать.",
+            reply_markup=get_back_to_admin_keyboard(),
+            parse_mode="HTML",
+        )
+    except Exception:
+        # Игнорируем ошибку если сообщение уже отредактировано
+        pass
     await callback.answer("Ключ создан!")
 
 
@@ -110,23 +114,29 @@ async def admin_unused_keys(callback: CallbackQuery):
     keys = _storage.get_unused_keys()
 
     if not keys:
-        await callback.message.edit_text(
-            "📭 <b>Нет активных ключей</b>\n\n"
-            "Создай новый ключ чтобы пригласить друга.",
-            reply_markup=get_back_to_admin_keyboard(),
-            parse_mode="HTML",
-        )
+        try:
+            await callback.message.edit_text(
+                "📭 <b>Нет активных ключей</b>\n\n"
+                "Создай новый ключ чтобы пригласить друга.",
+                reply_markup=get_back_to_admin_keyboard(),
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
     else:
         text = "🔑 <b>Активные ключи:</b>\n\n"
         for k in keys[:20]:
             created = format_date(k.created_at)
             text += f"<code>{k.key}</code>\n   📅 Создан: {created}\n\n"
 
-        await callback.message.edit_text(
-            text,
-            reply_markup=get_keys_list_keyboard(keys[:10], unused=True),
-            parse_mode="HTML",
-        )
+        try:
+            await callback.message.edit_text(
+                text,
+                reply_markup=get_keys_list_keyboard(keys[:10], unused=True),
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
     await callback.answer()
 
 
@@ -140,11 +150,14 @@ async def admin_used_keys(callback: CallbackQuery):
     keys = _storage.get_used_keys()
 
     if not keys:
-        await callback.message.edit_text(
-            "📭 <b>Нет использованных ключей</b>",
-            reply_markup=get_back_to_admin_keyboard(),
-            parse_mode="HTML",
-        )
+        try:
+            await callback.message.edit_text(
+                "📭 <b>Нет использованных ключей</b>",
+                reply_markup=get_back_to_admin_keyboard(),
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
     else:
         text = "👥 <b>Использованные ключи:</b>\n\n"
         for k in keys[:20]:
@@ -153,11 +166,14 @@ async def admin_used_keys(callback: CallbackQuery):
             activated = format_date(k.user.activated_at) if k.user else "—"
             text += f"<code>{k.key}</code>\n   👤 {username}\n   📅 Активирован: {activated}\n\n"
 
-        await callback.message.edit_text(
-            text,
-            reply_markup=get_keys_list_keyboard(keys[:10], unused=False),
-            parse_mode="HTML",
-        )
+        try:
+            await callback.message.edit_text(
+                text,
+                reply_markup=get_keys_list_keyboard(keys[:10], unused=False),
+                parse_mode="HTML",
+            )
+        except Exception:
+            pass
     await callback.answer()
 
 

@@ -55,16 +55,26 @@ async def main():
     storage.set_session_maker(get_session_maker())
 
     # Создаём клиент API
-    client = AutheduClient(config.authedu)
+    client = AutheduClient(config.authedu, proxy_url=config.proxy_url)
 
     # Инициализируем обработчики
     setup_handlers(config, client, storage)
     setup_admin_handlers(storage)
 
+    # Настраиваем прокси для aiogram (если указан)
+    from aiogram.client.session.aiohttp import AiohttpSession
+    
+    if config.proxy_url:
+        logger.info(f"Используется прокси: {config.proxy_url}")
+        session = AiohttpSession(proxy=config.proxy_url)
+    else:
+        session = AiohttpSession()
+
     # Создаём бота и диспетчер
     bot = Bot(
         token=config.telegram.bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
+        session=session,
     )
     dp = Dispatcher(storage=MemoryStorage())
 
