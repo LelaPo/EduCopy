@@ -41,8 +41,9 @@ class AutheduAPIError(Exception):
 class AutheduClient:
     """Асинхронный клиент для получения ДЗ."""
     
-    def __init__(self, config: AutheduConfig):
+    def __init__(self, config: AutheduConfig, proxy_url: str | None = None):
         self.config = config
+        self.proxy_url = proxy_url
         self._client: httpx.AsyncClient | None = None
     
     def _get_headers(self) -> dict[str, str]:
@@ -63,9 +64,15 @@ class AutheduClient:
     async def _get_client(self) -> httpx.AsyncClient:
         """Получить или создать HTTP-клиент."""
         if self._client is None or self._client.is_closed:
+            # Настраиваем прокси для httpx
+            proxies = None
+            if self.proxy_url:
+                proxies = {"http://": self.proxy_url, "https://": self.proxy_url}
+            
             self._client = httpx.AsyncClient(
                 timeout=30.0,
                 headers=self._get_headers(),
+                proxies=proxies,
             )
         return self._client
     

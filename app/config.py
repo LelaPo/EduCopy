@@ -45,10 +45,24 @@ class Config:
     telegram: TelegramConfig
     authedu: AutheduConfig
     timezone: str
+    proxy_url: str | None
 
 
 def load_config() -> Config:
     """Загрузить всю конфигурацию."""
+    # Получаем SOCKS5 прокси из .env (формат: socks5://user:pass@host:port или socks5://host:port)
+    proxy_host = get_env("PROXY_HOST", "", required=False)
+    proxy_port = get_env("PROXY_PORT", "", required=False)
+    proxy_user = get_env("PROXY_USER", "", required=False)
+    proxy_pass = get_env("PROXY_PASS", "", required=False)
+    
+    proxy_url = None
+    if proxy_host and proxy_port:
+        if proxy_user and proxy_pass:
+            proxy_url = f"socks5://{proxy_user}:{proxy_pass}@{proxy_host}:{proxy_port}"
+        else:
+            proxy_url = f"socks5://{proxy_host}:{proxy_port}"
+    
     return Config(
         telegram=TelegramConfig(
             bot_token=get_env("TG_BOT_TOKEN"),
@@ -63,4 +77,5 @@ def load_config() -> Config:
             cookie=get_env("AUTHEDU_COOKIE", "", required=False),
         ),
         timezone=get_env("TIMEZONE", "Europe/Moscow"),
+        proxy_url=proxy_url,
     )
