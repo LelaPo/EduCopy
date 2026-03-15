@@ -3,6 +3,8 @@ services:
     build: .
     container_name: homework_bot
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./data.db:/app/data.db
     env_file:
