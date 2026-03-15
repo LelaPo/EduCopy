@@ -1,38 +1,70 @@
 ```
-# Environment variables
-.env
-.env.local
-.env.*
-
 # Dependencies
-venv/
-.venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
+venv/
+.venv/
+.env
+.env.local
+.env.*
+.env~*
+requirements.txt.bak
+requirements-dev.txt
+requirements-test.txt
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Logs
-*.log
+# Build artifacts
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Coverage reports
+# Testing
 .coverage
 coverage/
 htmlcov/
+.nosetests
+.unit_test_results.xml
+.tox/
+.coverage.*
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
+# Logs
+*.log
+*.log.*
 
-# OS
+# Environment specific
+.envrc
+.venv.bak
+venv.bak
+.env.example
+.env.staging
+.env.production
+
+# Docker
+.dockerenv
+Dockerfile.bak
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
-
-# Build artifacts
-dist/
-build/
-*.egg-info/
 ```
